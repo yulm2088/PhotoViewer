@@ -14,35 +14,40 @@ PhotoViewer is a high-performance digital photo frame application specifically d
     *   **Zoom & Fade**: Images scale up while fading in.
 
 ### 2. Information Overlays
-*   **Clock & Date**: Displays the current time and date at the bottom-right corner. It automatically hides after 20 seconds of inactivity.
+*   **Artistic Clock & Date**: Displays the current time and date in a sophisticated, minimalist design at the bottom-right corner.
+    *   **Customizable**: Can be toggled ON/OFF in the settings menu.
+    *   **Visibility**: Automatically appears briefly during slideshow navigation or remains visible if configured.
 *   **Shooting Date**: Reads EXIF metadata to show the "Date Taken" at the top-right corner for 5 seconds after each transition.
-*   **Pause UI**: Displays a remote control guide and D-pad illustration when the slideshow is paused.
+*   **Enhanced Pause UI**: When paused, a visual D-pad guide (Remote Control illustration) appears, showing the mapping of directional keys to specific actions.
 
 ### 3. Image Operations (During Pause)
-*   **Rotation**: Rotate images 90 degrees left or right using the remote.
-*   **Save Rotation**: Option to overwrite the original file on the USB drive with the new orientation when resuming playback.
-*   **Physical Deletion**: Delete unwanted photos directly from the USB storage (includes a confirmation dialog).
+*   **Interactive Rotation**: Rotate images 90 degrees left or right using the **Up/Down** keys. The confirmation dialog only appears when you press **OK** to finish the operation, ensuring a smooth adjustment process.
+*   **Save Rotation**: Overwrite the original file with the new orientation. During saving, the app displays a "Saving..." status and locks input to prevent corruption. The image is automatically reloaded from disk after saving to verify the change.
+*   **Physical Deletion**: Delete unwanted photos directly from storage. A styled confirmation dialog prevents accidental deletions.
+*   **Automatic Resume**: Playback automatically resumes after confirming a deletion or saving a rotation, keeping the experience seamless.
 
-### 4. System Integration
+### 4. User Interface & Accessibility
+*   **Styled Dialogs**: All menus (Settings, Delete, Save) feature modern TV-optimized designs with clear titles, detailed descriptions, and focus-friendly layouts.
+*   **Smart Focus Management**: The app automatically focuses on the most relevant button when a dialog opens, making it fully operational with a standard TV remote.
 *   **USB Auto-Detection**: Automatically refreshes the image list when a USB drive is mounted or removed.
-*   **Keep Screen On**: Prevents the device from sleeping while the app is running.
-*   **Immersive Full Screen**: Hides system bars to focus entirely on the photos.
+*   **Immersive Experience**: Keeps the screen on and hides system bars to focus entirely on the photos.
 
 ## Remote Control (D-pad) Guide
 
 | Button | Normal Mode | Pause Mode |
 | :--- | :--- | :--- |
-| **Select (OK)** | Pause | Resume (shows Save Confirmation if rotated) |
-| **Back** | Exit App | Resume without saving |
-| **Right** | Next Image | Show Settings Menu |
-| **Left** | Previous Image | Show Delete Confirmation |
+| **Select (OK)** | Pause Slideshow | Confirm (Shows Save Dialog if rotated / Resume) |
+| **Back** | Exit Application | Close Dialog or Resume Slideshow |
+| **Right** | Next Image | Open **Settings** Menu |
+| **Left** | Previous Image | Open **Delete** Confirmation |
 | **Up** | - | Rotate 90° Clockwise |
 | **Down** | - | Rotate 90° Counter-Clockwise |
 
 ## Settings
 Accessible via the **Right** button while paused:
-*   **Interval**: Set slideshow speed (10s / 15s / 20s).
-*   **Transition**: Enable or disable random transition effects.
+*   **Interval**: Set slideshow speed (10s / 15s / 20s). Includes a brief description of the setting.
+*   **Transition**: Enable or disable random transition effects (Crossfade, Slide, Zoom).
+*   **Clock Display**: Toggle the artistic clock and date overlay ON/OFF.
 
 ## Technical Specifications
 *   **Minimum OS**: Android 8.0 (API 26)

@@ -20,6 +20,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -30,6 +32,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
@@ -142,16 +146,21 @@ fun PhotoFrameApp(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val mainFocusRequester = remember { FocusRequester() }
+
     var imagePaths by remember { mutableStateOf(emptyList<String>()) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var isPaused by remember { mutableStateOf(false) }
     var intervalSeconds by remember { mutableIntStateOf(10) }
     var transitionsEnabled by remember { mutableStateOf(true) }
+    var showClock by remember { mutableStateOf(true) }
     var showOverlay by remember { mutableStateOf(false) }
     var showExif by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showSaveRotateConfirm by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var refreshKey by remember { mutableIntStateOf(0) }
     var rotationAngle by remember { mutableFloatStateOf(0f) }
     
     val currentImage = if (imagePaths.isNotEmpty()) imagePaths[currentIndex % imagePaths.size] else null
@@ -182,6 +191,7 @@ fun PhotoFrameApp(
     LaunchedEffect(Unit) {
         onRefreshBound { scan() }
         scan()
+        mainFocusRequester.requestFocus()
     }
 
     LaunchedEffect(isPaused, intervalSeconds, imagePaths.size) {
@@ -198,9 +208,19 @@ fun PhotoFrameApp(
     }
 
     LaunchedEffect(showOverlay) {
-        if (showOverlay) {
-            delay(20000)
+        if (showOverlay && !isPaused) {
+            delay(5000)
             showOverlay = false
+        }
+    }
+
+    val isAnyDialogOpen = showSettings || showDeleteConfirm || showSaveRotateConfirm
+
+    LaunchedEffect(isAnyDialogOpen) {
+        if (!isAnyDialogOpen) {
+            // Delay slightly to ensure composition is ready before requesting focus
+            delay(100)
+            mainFocusRequester.requestFocus()
         }
     }
 
@@ -208,12 +228,30 @@ fun PhotoFrameApp(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .focusRequester(mainFocusRequester)
             .onKeyEvent {
+                if (isSaving) return@onKeyEvent true // Block input while saving
                 if (it.type == KeyEventType.KeyDown) {
+                    // When a dialog is open, the dialog's own components should handle keys.
+                    // We only catch the BACK key here to close the dialogs.
+                    if (isAnyDialogOpen) {
+                        if (it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK) {
+                            if (showSettings) showSettings = false
+                            else if (showDeleteConfirm) showDeleteConfirm = false
+                            else if (showSaveRotateConfirm) showSaveRotateConfirm = false
+                            return@onKeyEvent true
+                        }
+                        // Allow other keys to propagate so focus navigation works in the dialog
+                        return@onKeyEvent false
+                    }
+
                     when (it.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                             if (isPaused) {
-                                if (rotationAngle != 0f) showSaveRotateConfirm = true
+                                if (rotationAngle != 0f) {
+                                    showOverlay = false
+                                    showSaveRotateConfirm = true
+                                }
                                 else isPaused = false
                             } else {
                                 isPaused = true
@@ -222,13 +260,17 @@ fun PhotoFrameApp(
                             true
                         }
                         KeyEvent.KEYCODE_BACK -> {
-                            if (isPaused) isPaused = false
+                            if (showSettings) showSettings = false
+                            else if (showDeleteConfirm) showDeleteConfirm = false
+                            else if (showSaveRotateConfirm) showSaveRotateConfirm = false
+                            else if (isPaused) isPaused = false
                             else (context as? ComponentActivity)?.finish()
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            if (isPaused) showSettings = true
-                            else {
+                            if (isPaused) {
+                                showSettings = true
+                            } else {
                                 currentIndex = (currentIndex + 1) % imagePaths.size
                                 rotationAngle = 0f
                                 showOverlay = true
@@ -236,8 +278,9 @@ fun PhotoFrameApp(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            if (isPaused) showDeleteConfirm = true
-                            else {
+                            if (isPaused) {
+                                showDeleteConfirm = true
+                            } else {
                                 currentIndex = if (currentIndex > 0) currentIndex - 1 else imagePaths.size - 1
                                 rotationAngle = 0f
                                 showOverlay = true
@@ -256,7 +299,7 @@ fun PhotoFrameApp(
                     }
                 } else false
             }
-            .focusable()
+            .focusable(!isAnyDialogOpen)
     ) {
         if (currentImage != null) {
             val transition = if (transitionsEnabled) {
@@ -281,6 +324,13 @@ fun PhotoFrameApp(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(path)
+                        .apply {
+                            if (refreshKey > 0) {
+                                setParameter("refresh", refreshKey)
+                                memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                            }
+                        }
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
@@ -295,7 +345,7 @@ fun PhotoFrameApp(
             }
         }
 
-        if (showOverlay) {
+        if (showOverlay && showClock) {
             ClockOverlay(Modifier.align(Alignment.BottomEnd))
         }
 
@@ -311,92 +361,162 @@ fun PhotoFrameApp(
             }
         }
 
-        if (isPaused) {
+        if (isPaused && !isAnyDialogOpen && !isSaving) {
             PauseOverlay(Modifier.align(Alignment.TopEnd))
         }
 
-        // Custom Overlays for Dialogs
-        if (showSettings) {
-            OverlayDialog(onDismiss = { showSettings = false }) {
-                Column {
-                    Text("切替間隔", fontWeight = FontWeight.Bold)
-                    Row {
-                        listOf(10, 15, 20).forEach { sec ->
-                            FilterChip(
-                                selected = intervalSeconds == sec,
-                                onClick = { intervalSeconds = sec },
-                                modifier = Modifier.padding(4.dp)
-                            ) {
-                                Text("${sec}s")
-                            }
-                        }
-                    }
+        if (isSaving) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.CircularProgressIndicator(color = Color.White)
                     Spacer(Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("演出 (Transition)")
-                        Spacer(Modifier.weight(1f))
-                        Switch(checked = transitionsEnabled, onCheckedChange = { transitionsEnabled = it })
-                    }
-                    Spacer(Modifier.height(24.dp))
-                    Button(onClick = { showSettings = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("閉じる")
-                    }
+                    Text("保存中...", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("画像を更新しています", color = Color.LightGray, fontSize = 14.sp)
                 }
             }
         }
 
-        if (showDeleteConfirm) {
-            OverlayDialog(onDismiss = { showDeleteConfirm = false }) {
+        if (showSettings) {
+            val firstFocusRequester = remember { FocusRequester() }
+            OverlayDialog(title = "設定", onDismiss = { showSettings = false }) {
                 Column {
-                    Text("削除確認", fontWeight = FontWeight.Bold)
+                    Text("切替間隔", style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
+                    Text("スライドショーの画像が切り替わる秒数を設定します。", fontSize = 12.sp, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
-                    Text("この写真を物理的に削除しますか？")
+                    Row {
+                        listOf(10, 15, 20).forEachIndexed { index, sec ->
+                            FocusableFilterChip(
+                                selected = intervalSeconds == sec,
+                                onClick = { intervalSeconds = sec },
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier)
+                            ) {
+                                Text("${sec}秒")
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(24.dp))
+                    Text("演出 (Transition)", style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
+                    Text("画像が切り替わる際のアニメーション効果を有効にします。", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("演出を有効にする", color = Color.White)
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = transitionsEnabled, onCheckedChange = { transitionsEnabled = it })
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("時計の表示", color = Color.White)
+                            Text("日付と時刻を画面右下に表示します。", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = showClock, onCheckedChange = { showClock = it })
+                    }
+                    Spacer(Modifier.height(32.dp))
+                    FocusableButton(
+                        onClick = { 
+                            showSettings = false
+                            isPaused = false // Resume slideshow after closing settings
+                            showOverlay = false
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("閉じる")
+                    }
+                }
+            }
+            LaunchedEffect(Unit) {
+                delay(200)
+                firstFocusRequester.requestFocus()
+            }
+        }
+
+        if (showDeleteConfirm) {
+            val cancelFocusRequester = remember { FocusRequester() }
+            OverlayDialog(title = "削除の確認", onDismiss = { showDeleteConfirm = false }) {
+                Column {
+                    Text("現在表示中の写真をストレージから完全に削除します。", color = Color.White)
+                    Text("この操作は取り消せません。", color = Color.Red, fontSize = 12.sp)
+                    Spacer(Modifier.height(32.dp))
                     Row(modifier = Modifier.align(Alignment.End)) {
-                        Button(onClick = { showDeleteConfirm = false }) {
+                        FocusableButton(
+                            onClick = { showDeleteConfirm = false },
+                            modifier = Modifier.focusRequester(cancelFocusRequester)
+                        ) {
                             Text("キャンセル")
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
+                        Spacer(Modifier.width(16.dp))
+                        FocusableButton(onClick = {
                             currentImage?.let { 
                                 File(it).delete() 
                                 scan()
                             }
                             showDeleteConfirm = false
+                            isPaused = false // Resume slideshow
+                            showOverlay = false
                         }) {
-                            Text("削除")
+                            Text("削除する")
                         }
                     }
                 }
             }
+            LaunchedEffect(Unit) {
+                delay(200)
+                cancelFocusRequester.requestFocus()
+            }
         }
 
         if (showSaveRotateConfirm) {
-            OverlayDialog(onDismiss = { showSaveRotateConfirm = false }) {
+            val saveFocusRequester = remember { FocusRequester() }
+            OverlayDialog(title = "回転の保存", onDismiss = { showSaveRotateConfirm = false }) {
                 Column {
-                    Text("回転保存", fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("回転させた状態で上書き保存しますか？")
-                    Spacer(Modifier.height(24.dp))
+                    Text("画像を現在の角度で上書き保存しますか？", color = Color.White)
+                    Spacer(Modifier.height(32.dp))
                     Row(modifier = Modifier.align(Alignment.End)) {
-                        Button(onClick = { 
+                        FocusableButton(onClick = { 
                             rotationAngle = 0f
-                            isPaused = false
                             showSaveRotateConfirm = false 
+                            isPaused = false
                         }) {
                             Text("保存せずに再開")
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
-                            currentImage?.let { saveRotatedImage(it, rotationAngle) }
-                            rotationAngle = 0f
-                            isPaused = false
-                            showSaveRotateConfirm = false
-                        }) {
+                        Spacer(Modifier.width(16.dp))
+                        FocusableButton(
+                            onClick = {
+                                val path = currentImage
+                                val angle = rotationAngle
+                                showSaveRotateConfirm = false
+                                if (path != null) {
+                                    scope.launch {
+                                        isSaving = true
+                                        withContext(Dispatchers.IO) {
+                                            saveRotatedImage(path, angle)
+                                        }
+                                        rotationAngle = 0f
+                                        refreshKey++ // Force reload
+                                        delay(800) // Short delay to show updated image
+                                        isSaving = false
+                                        isPaused = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.focusRequester(saveFocusRequester)
+                        ) {
                             Text("保存して再開")
                         }
                     }
                 }
+            }
+            LaunchedEffect(Unit) {
+                delay(300)
+                saveFocusRequester.requestFocus()
             }
         }
     }
@@ -404,21 +524,80 @@ fun PhotoFrameApp(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun OverlayDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun FocusableButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        border = ButtonDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, Color.White)),
+            border = Border(BorderStroke(1.dp, Color.Transparent))
+        ),
+        content = content
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun FocusableFilterChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        border = FilterChipDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, Color.White)),
+            border = Border(BorderStroke(1.dp, Color.Transparent))
+        ),
+        content = content
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun OverlayDialog(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f))
-            .clickable(onClick = onDismiss, enabled = true),
+            .background(Color.Black.copy(alpha = 0.85f))
+            .onKeyEvent {
+                if (it.type == KeyEventType.KeyDown && it.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK) {
+                    onDismiss()
+                    true
+                } else {
+                    false
+                }
+            }
+            .focusable(),
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .background(Color(0xFF202020), RoundedCornerShape(12.dp))
-                .padding(24.dp)
-                .widthIn(min = 300.dp)
-                .clickable(enabled = false) {},
+                .background(Color(0xFF282828), RoundedCornerShape(16.dp))
+                .padding(32.dp)
+                .widthIn(min = 400.dp, max = 600.dp),
         ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.Gray.copy(alpha = 0.5f))
+            )
+            Spacer(Modifier.height(24.dp))
             content()
         }
     }
@@ -427,23 +606,49 @@ fun OverlayDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ClockOverlay(modifier: Modifier) {
+    var dateText by remember { mutableStateOf("") }
     var timeText by remember { mutableStateOf("") }
+    
     LaunchedEffect(Unit) {
+        val dateFormat = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         while (true) {
-            timeText = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault()).format(Date())
+            val now = Date()
+            dateText = dateFormat.format(now)
+            timeText = timeFormat.format(now)
             delay(1000)
         }
     }
-    Text(
-        text = timeText,
-        color = Color.White,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
+
+    Column(
         modifier = modifier
-            .padding(24.dp)
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    )
+            .padding(32.dp)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(16.dp),
+        horizontalAlignment = Alignment.End
+    ) {
+        Text(
+            text = timeText,
+            color = Color.White,
+            fontSize = 56.sp,
+            fontWeight = FontWeight.Thin,
+            letterSpacing = (-2).sp,
+            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, blurRadius = 8f))
+        )
+        Text(
+            text = dateText,
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Light,
+            modifier = Modifier.padding(top = 0.dp),
+            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, blurRadius = 4f))
+        )
+    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -457,15 +662,38 @@ fun PauseOverlay(modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("一時停止中", color = Color.White, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        PauseActionItem(Icons.Default.ArrowUpward, "回転(右)")
-        PauseActionItem(Icons.Default.ArrowDownward, "回転(左)")
-        PauseActionItem(Icons.Default.ArrowBack, "削除")
-        PauseActionItem(Icons.Default.ArrowForward, "設定")
-        Spacer(Modifier.height(8.dp))
-        Box(modifier = Modifier.size(60.dp), contentAlignment = Alignment.Center) {
-             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+        Spacer(Modifier.height(16.dp))
+        
+        // Remote Control D-Pad Illustration
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Up arrow
+            Icon(Icons.Default.ArrowDropUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Left arrow
+                Icon(Icons.Default.ArrowLeft, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+                // OK Button
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color.White.copy(alpha = 0.2f), androidx.compose.foundation.shape.CircleShape)
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("OK", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                // Right arrow
+                Icon(Icons.Default.ArrowRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+            // Down arrow
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
         }
+        
+        Spacer(Modifier.height(16.dp))
+        PauseActionItem(Icons.Default.ArrowUpward, "上：右回転")
+        PauseActionItem(Icons.Default.ArrowDownward, "下：左回転")
+        PauseActionItem(Icons.Default.ArrowBack, "左：削除")
+        PauseActionItem(Icons.Default.ArrowForward, "右：設定")
+        PauseActionItem(Icons.Default.CheckCircle, "OK：再開/保存")
     }
 }
 

@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.photoframe.myapk_pf",
+  "applicationId": "com.photoframe.photoviewer",
   "variantName": "release",
   "elements": [
     {
