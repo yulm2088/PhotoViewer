@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.photoframe.myapk_pf"
     compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
         applicationId = "com.photoframe.photoviewer"
