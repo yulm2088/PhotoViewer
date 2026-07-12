@@ -2,6 +2,9 @@
 
 PhotoViewer is a high-performance digital photo frame application specifically designed for Android TV and Set-Top Boxes (STB). It automatically scans images from external storage (such as USB drives) and displays them with various transition effects, providing a seamless and immersive viewing experience.
 
+## Download
+https://github.com/yulm2088/PhotoViewer/releases
+
 ## Key Features
 
 ### 1. Slideshow & Playback
