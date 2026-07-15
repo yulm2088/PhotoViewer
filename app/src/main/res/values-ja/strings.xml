@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">PhotoViewer</string>
+    <string name="scanning_images">画像を検索中…</string>
+    <string name="shooting_date">撮影日: %1$s</string>
+    <string name="paused">一時停止中</string>
+    <string name="rotate_right">上：右回転</string>
+    <string name="rotate_left">下：左回転</string>
+    <string name="delete_photo">左：削除</string>
+    <string name="settings">右：設定</string>
+    <string name="resume_save">OK：再開/保存</string>
+
+    <string name="dialog_settings_title">設定</string>
+    <string name="interval_title">切替間隔</string>
+    <string name="interval_desc">スライドショーの画像が切り替わる秒数を設定します。</string>
+    <string name="seconds">%1$d秒</string>
+    <string name="transition_title">演出 (Transition)</string>
+    <string name="transition_desc">画像が切り替わる際のアニメーション効果を有効にします。</string>
+    <string name="enable_transition">演出を有効にする</string>
+    <string name="clock_display_title">時計の表示</string>
+    <string name="clock_display_desc">日付と時刻を画面右下に表示します。</string>
+    <string name="btn_close">閉じる</string>
+
+    <string name="dialog_delete_title">削除の確認</string>
+    <string name="delete_desc">現在表示中の写真をストレージから完全に削除します。</string>
+    <string name="delete_warning">この操作は取り消せません。</string>
+    <string name="btn_cancel">キャンセル</string>
+    <string name="btn_delete">削除する</string>
+
+    <string name="dialog_rotate_title">回転の保存</string>
+    <string name="rotate_desc">画像を現在の角度で上書き保存しますか？</string>
+    <string name="btn_resume_without_save">保存せずに再開</string>
+    <string name="btn_save_and_resume">保存して再開</string>
+
+    <string name="saving_status">保存中…</string>
+    <string name="updating_image">画像を更新しています</string>
+</resources>

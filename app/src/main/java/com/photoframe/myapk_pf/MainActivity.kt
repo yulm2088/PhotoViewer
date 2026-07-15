@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.res.stringResource
+import com.photoframe.myapk_pf.R
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -341,7 +343,7 @@ fun PhotoFrameApp(
             }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("画像を検索中...", color = Color.White)
+                Text(stringResource(R.string.scanning_images), color = Color.White)
             }
         }
 
@@ -357,7 +359,7 @@ fun PhotoFrameApp(
                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                     .padding(8.dp)
             ) {
-                Text("撮影日: $currentExifDate", color = Color.White, fontSize = 18.sp)
+                Text(stringResource(R.string.shooting_date, currentExifDate), color = Color.White, fontSize = 18.sp)
             }
         }
 
@@ -375,18 +377,18 @@ fun PhotoFrameApp(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     androidx.compose.material3.CircularProgressIndicator(color = Color.White)
                     Spacer(Modifier.height(16.dp))
-                    Text("保存中...", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("画像を更新しています", color = Color.LightGray, fontSize = 14.sp)
+                    Text(stringResource(R.string.saving_status), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.updating_image), color = Color.LightGray, fontSize = 14.sp)
                 }
             }
         }
 
         if (showSettings) {
             val firstFocusRequester = remember { FocusRequester() }
-            OverlayDialog(title = "設定", onDismiss = { showSettings = false }) {
+            OverlayDialog(title = stringResource(R.string.dialog_settings_title), onDismiss = { showSettings = false }) {
                 Column {
-                    Text("切替間隔", style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
-                    Text("スライドショーの画像が切り替わる秒数を設定します。", fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.interval_title), style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
+                    Text(stringResource(R.string.interval_desc), fontSize = 12.sp, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
                     Row {
                         listOf(10, 15, 20).forEachIndexed { index, sec ->
@@ -397,24 +399,24 @@ fun PhotoFrameApp(
                                     .padding(4.dp)
                                     .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier)
                             ) {
-                                Text("${sec}秒")
+                                Text(stringResource(R.string.seconds, sec))
                             }
                         }
                     }
                     Spacer(Modifier.height(24.dp))
-                    Text("演出 (Transition)", style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
-                    Text("画像が切り替わる際のアニメーション効果を有効にします。", fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.transition_title), style = MaterialTheme.typography.labelLarge, color = Color.LightGray)
+                    Text(stringResource(R.string.transition_desc), fontSize = 12.sp, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("演出を有効にする", color = Color.White)
+                        Text(stringResource(R.string.enable_transition), color = Color.White)
                         Spacer(Modifier.weight(1f))
                         Switch(checked = transitionsEnabled, onCheckedChange = { transitionsEnabled = it })
                     }
                     Spacer(Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column {
-                            Text("時計の表示", color = Color.White)
-                            Text("日付と時刻を画面右下に表示します。", fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.clock_display_title), color = Color.White)
+                            Text(stringResource(R.string.clock_display_desc), fontSize = 12.sp, color = Color.Gray)
                         }
                         Spacer(Modifier.weight(1f))
                         Switch(checked = showClock, onCheckedChange = { showClock = it })
@@ -428,7 +430,7 @@ fun PhotoFrameApp(
                         },
                         modifier = Modifier.align(Alignment.End)
                     ) {
-                        Text("閉じる")
+                        Text(stringResource(R.string.btn_close))
                     }
                 }
             }
@@ -440,17 +442,17 @@ fun PhotoFrameApp(
 
         if (showDeleteConfirm) {
             val cancelFocusRequester = remember { FocusRequester() }
-            OverlayDialog(title = "削除の確認", onDismiss = { showDeleteConfirm = false }) {
+            OverlayDialog(title = stringResource(R.string.dialog_delete_title), onDismiss = { showDeleteConfirm = false }) {
                 Column {
-                    Text("現在表示中の写真をストレージから完全に削除します。", color = Color.White)
-                    Text("この操作は取り消せません。", color = Color.Red, fontSize = 12.sp)
+                    Text(stringResource(R.string.delete_desc), color = Color.White)
+                    Text(stringResource(R.string.delete_warning), color = Color.Red, fontSize = 12.sp)
                     Spacer(Modifier.height(32.dp))
                     Row(modifier = Modifier.align(Alignment.End)) {
                         FocusableButton(
                             onClick = { showDeleteConfirm = false },
                             modifier = Modifier.focusRequester(cancelFocusRequester)
                         ) {
-                            Text("キャンセル")
+                            Text(stringResource(R.string.btn_cancel))
                         }
                         Spacer(Modifier.width(16.dp))
                         FocusableButton(onClick = {
@@ -462,7 +464,7 @@ fun PhotoFrameApp(
                             isPaused = false // Resume slideshow
                             showOverlay = false
                         }) {
-                            Text("削除する")
+                            Text(stringResource(R.string.btn_delete))
                         }
                     }
                 }
@@ -475,9 +477,9 @@ fun PhotoFrameApp(
 
         if (showSaveRotateConfirm) {
             val saveFocusRequester = remember { FocusRequester() }
-            OverlayDialog(title = "回転の保存", onDismiss = { showSaveRotateConfirm = false }) {
+            OverlayDialog(title = stringResource(R.string.dialog_rotate_title), onDismiss = { showSaveRotateConfirm = false }) {
                 Column {
-                    Text("画像を現在の角度で上書き保存しますか？", color = Color.White)
+                    Text(stringResource(R.string.rotate_desc), color = Color.White)
                     Spacer(Modifier.height(32.dp))
                     Row(modifier = Modifier.align(Alignment.End)) {
                         FocusableButton(onClick = { 
@@ -485,7 +487,7 @@ fun PhotoFrameApp(
                             showSaveRotateConfirm = false 
                             isPaused = false
                         }) {
-                            Text("保存せずに再開")
+                            Text(stringResource(R.string.btn_resume_without_save))
                         }
                         Spacer(Modifier.width(16.dp))
                         FocusableButton(
@@ -509,7 +511,7 @@ fun PhotoFrameApp(
                             },
                             modifier = Modifier.focusRequester(saveFocusRequester)
                         ) {
-                            Text("保存して再開")
+                            Text(stringResource(R.string.btn_save_and_resume))
                         }
                     }
                 }
@@ -661,7 +663,7 @@ fun PauseOverlay(modifier: Modifier) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("一時停止中", color = Color.White, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.paused), color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
         
         // Remote Control D-Pad Illustration
@@ -689,11 +691,11 @@ fun PauseOverlay(modifier: Modifier) {
         }
         
         Spacer(Modifier.height(16.dp))
-        PauseActionItem(Icons.Default.ArrowUpward, "上：右回転")
-        PauseActionItem(Icons.Default.ArrowDownward, "下：左回転")
-        PauseActionItem(Icons.Default.ArrowBack, "左：削除")
-        PauseActionItem(Icons.Default.ArrowForward, "右：設定")
-        PauseActionItem(Icons.Default.CheckCircle, "OK：再開/保存")
+        PauseActionItem(Icons.Default.ArrowUpward, stringResource(R.string.rotate_right))
+        PauseActionItem(Icons.Default.ArrowDownward, stringResource(R.string.rotate_left))
+        PauseActionItem(Icons.Default.ArrowBack, stringResource(R.string.delete_photo))
+        PauseActionItem(Icons.Default.ArrowForward, stringResource(R.string.settings))
+        PauseActionItem(Icons.Default.CheckCircle, stringResource(R.string.resume_save))
     }
 }
 

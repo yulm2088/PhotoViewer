@@ -1,3 +1,36 @@
 <resources>
     <string name="app_name">PhotoViewer</string>
+    <string name="scanning_images">Scanning images...</string>
+    <string name="shooting_date">Shooting Date: %1$s</string>
+    <string name="paused">Paused</string>
+    <string name="rotate_right">Up: Rotate Right</string>
+    <string name="rotate_left">Down: Rotate Left</string>
+    <string name="delete_photo">Left: Delete</string>
+    <string name="settings">Right: Settings</string>
+    <string name="resume_save">OK: Resume/Save</string>
+
+    <string name="dialog_settings_title">Settings</string>
+    <string name="interval_title">Interval</string>
+    <string name="interval_desc">Set how many seconds each image is displayed.</string>
+    <string name="seconds">%1$d seconds</string>
+    <string name="transition_title">Transitions</string>
+    <string name="transition_desc">Enable animation effects when images change.</string>
+    <string name="enable_transition">Enable Transitions</string>
+    <string name="clock_display_title">Clock Display</string>
+    <string name="clock_display_desc">Show date and time in the bottom-right corner.</string>
+    <string name="btn_close">Close</string>
+
+    <string name="dialog_delete_title">Confirm Deletion</string>
+    <string name="delete_desc">Permanently delete this photo from storage.</string>
+    <string name="delete_warning">This action cannot be undone.</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
+
+    <string name="dialog_rotate_title">Save Rotation</string>
+    <string name="rotate_desc">Overwrite image with current rotation?</string>
+    <string name="btn_resume_without_save">Resume without Saving</string>
+    <string name="btn_save_and_resume">Save and Resume</string>
+
+    <string name="saving_status">Saving...</string>
+    <string name="updating_image">Updating image</string>
 </resources>
